@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model StorageAccess {
+  id             Int         @id @default(autoincrement())
+  epoch          Int
+  blocknumber    Int
+  blocktimestamp Int
+  txhash         String
+  opcode         opcode_enum
+  address        String
+  slot           String
+  iswarm         Boolean
+  accesscount    Int
+}
+
+model Cache {
+  slot        String @id
+  ttl         String
+  accesscount Int
+}
+
+model Tracking {
+  id        Int @id @default(autoincrement())
+  lastepoch Int
+}
+
+model Report {
+  id              Int    @id @default(autoincrement())
+  ttl             String
+  blocknumber     Int
+  hit             Int
+  miss            Int
+  cachesize       Int
+  unusedcachesize Int
+}
+
+enum opcode_enum {
+  SLOAD
+  SSTORE
+}

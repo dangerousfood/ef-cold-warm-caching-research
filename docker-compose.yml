@@ -1,0 +1,29 @@
+version: "1"
+name: cache-research
+
+services:
+  postgres:
+    container_name: postgres
+    image: postgres
+    ports:
+      - 5432:5432
+    volumes:
+      - postgresql:/var/lib/postgresql
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 2s
+      timeout: 5s
+      retries: 5
+
+networks:
+  default:
+    # external: true
+    name: cache-research
+
+volumes:
+  postgresql:
