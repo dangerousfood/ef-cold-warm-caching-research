@@ -21,7 +21,8 @@ CREATE TABLE cache_research."StorageAccess" (
 );
 
 CREATE TABLE cache_research."Cache" (
-    slot TEXT PRIMARY KEY,
+    id SERIAL PRIMARY KEY,
+    slot TEXT NOT NULL,
     ttl TEXT NOT NULL,
     accessCount INT NOT NULL
 );

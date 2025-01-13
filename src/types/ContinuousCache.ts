@@ -56,25 +56,25 @@ class ContinuousCache implements ICache, EventMap {
     return (this.ttl) ? this.ttl.toString() : this.constructor.name
   }
 
-  async deleteCache(prisma: PrismaClient): Promise<void> {
+  async deleteCache(prisma: PrismaClient): Promise<any> {
+    console.log('deleting cache')
     const ttl = this.getTtl()
-    await prisma.cache.deleteMany({
+    return prisma.cache.deleteMany({
       where: {
         ttl: ttl,
       }
     })
   }
 
-  async storeCache(prisma: PrismaClient): Promise<void> {
+  async storeCache(prisma: PrismaClient): Promise<any> {
+    console.log('storing cache', this.cache.size)
     const ttl = this.getTtl()
-    this.cache.forEach((value, key) => {
-      prisma.cache.create({
-        data: {
-          ttl: ttl,
-          slot: key,
-          accesscount: value
-        }
-      })
+    return prisma.cache.createMany({
+      data: Array.from(this.cache.entries()).map(([key, value]) => ({
+        ttl: ttl,
+        slot: key,
+        accesscount: value
+      }))
     })
   }
 
@@ -90,22 +90,20 @@ class ContinuousCache implements ICache, EventMap {
     })
   }
 
-  async storeReport(prisma: PrismaClient): Promise<void> {
-    Promise.all(Array.from(this.reports.entries()).map(([key, value]) => {
-      prisma.report.create({
-        data: {
-          ttl: this.getTtl(),
-          blocknumber: key,
-          hit: value.hit,
-          miss: value.miss,
-          cachesize: value.cacheSize,
-          unusedcachesize: value.unusedCacheSize
-        }
-      })
-    })).then(() => {
-      this.reports.clear()
+  async storeReport(prisma: PrismaClient): Promise<any> {
+    console.log('storing report', this.reports.size)
+    return prisma.report.createMany({
+      data: Array.from(this.reports.entries()).map(([key, value]) => ({
+        ttl: this.getTtl(),
+        blocknumber: key,
+        hit: value.hit,
+        miss: value.miss,
+        cachesize: value.cacheSize,
+        unusedcachesize: value.unusedCacheSize
+      }))
     })
   }
 }
+
 
 export default ContinuousCache;

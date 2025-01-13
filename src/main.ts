@@ -11,15 +11,16 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const updateCachingAndTracking = (caches: ContinuousCache[], lastepoch: number) => {
-  prisma.tracking.deleteMany()
-
-  caches.forEach(async (cache) => {
+const updateCachingAndTracking = async (caches: ContinuousCache[], lastepoch: number) => {
+  
+  const promises: Promise<any>[] = caches.map(async (cache) => {
     await cache.deleteCache(prisma)
     await cache.storeCache(prisma)
     await cache.storeReport(prisma)
   })
-  prisma.tracking.create({
+  promises.push(prisma.tracking.deleteMany())
+  await Promise.all(promises)
+  await prisma.tracking.create({
     data: {
       lastepoch: lastepoch
     }
@@ -46,6 +47,7 @@ const updateCachingAndTracking = (caches: ContinuousCache[], lastepoch: number) 
   ]
 
   if(restoreFromCache) {
+    console.log('restoring from cache')
     caches.forEach(async (cache) => {
       await cache.loadCache(prisma)
     })
@@ -57,14 +59,15 @@ const updateCachingAndTracking = (caches: ContinuousCache[], lastepoch: number) 
   }
 
 
-  for(let epoch = startEpoch; epoch <= endEpoch; epoch+=simultaneousQueries) {
-    let epochEnd = simultaneousQueries;
-    if(endEpoch - epoch < simultaneousQueries) {
-      epochEnd = endEpoch - epoch
+  for(let currentEpoch = startEpoch; currentEpoch <= endEpoch; currentEpoch+=simultaneousQueries) {
+    let end = simultaneousQueries;
+    if(endEpoch - currentEpoch < simultaneousQueries) {
+      end = endEpoch - currentEpoch
     }
+    console.log('currentEpoch:', currentEpoch, 'end:', end, 'endEpoch:', endEpoch, 'startEpoch:', startEpoch)
     const cachedEpochs:CacheEpoch[] = [];
-    for(let i = 0; i < epochEnd; i++) {
-      const cacheEpoch = new CacheEpoch(epoch + i, process.env.NODE_URL, process.env.BEACON_API_URL)
+    for(let i = currentEpoch; i < currentEpoch + end; i++) {
+      const cacheEpoch = new CacheEpoch(currentEpoch, process.env.NODE_URL, process.env.BEACON_API_URL)
       await cacheEpoch.create()
       cachedEpochs.push(cacheEpoch)
     }
@@ -74,7 +77,7 @@ const updateCachingAndTracking = (caches: ContinuousCache[], lastepoch: number) 
         processEpochCache(epoch.storageAccesses, caches);
       })
     })
-    updateCachingAndTracking(caches, epoch + epochEnd)
+    await updateCachingAndTracking(caches, currentEpoch + end)
   }
 
   console.log('execution time:', (Date.now() / 1000) - start);

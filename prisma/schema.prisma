@@ -21,7 +21,8 @@ model StorageAccess {
 }
 
 model Cache {
-  slot        String @id
+  id          Int    @id @default(autoincrement())
+  slot        String
   ttl         String
   accesscount Int
 }
